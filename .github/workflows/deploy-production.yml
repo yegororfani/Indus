@@ -1,0 +1,77 @@
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-service-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "agent"
+            services: |
+              agent
+          - name: "web"
+            services: |
+              web
+          - name: "nginx"
+            services: |
+              nginx
+    env:
+      ENV: production
+
+    name: Build & Push Images for ${{ matrix.name }}
+    steps:
+      - name: GitHub Runtime
+        uses: crazy-max/ghaction-github-runtime@v3.0.0
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build & Push Images
+        uses: ./.github/actions/build-service-images
+        with:
+          env: production
+          build-services: ${{ matrix.services }}
+          registry: ghcr.io
+          registry-user: ${{ github.actor }}
+          registry-password: ${{ secrets.CR_PAT }}
+
+  deploy:
+    needs:
+      - build-service-images
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "repository=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Server
+        uses: ./.github/actions/deploy
+        with:
+          env: production
+          version: ${{ github.sha }}
+          server_ip: ${{ secrets.SERVER_IP }}
+          server_password: ${{ secrets.SERVER_PASSWORD }}
+          server_user: root
+          project_path: /root/app
+          stack_name: voice-agent
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.CR_PAT }}
+          image_repository: ghcr.io/${{ steps.repo.outputs.repository }}
+          livekit_url: ${{ secrets.LIVEKIT_URL }}
+          livekit_api_key: ${{ secrets.LIVEKIT_API_KEY }}
+          livekit_api_secret: ${{ secrets.LIVEKIT_API_SECRET }}

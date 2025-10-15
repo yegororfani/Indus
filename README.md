@@ -2,7 +2,7 @@
 
 A real-time voice AI agent application that participates in complimentary rap battles. Unlike traditional rap battles, this agent specializes in delivering kind, uplifting compliments and praise through creative wordplay, metaphors, and rhythmic flow. Battle your opponent with kindness - the goal is to out-compliment them!
 
-## Overview
+##  Overview
 
 This project demonstrates a LiveKit-powered voice agent that engages in positive rap battles with two modes:
 
